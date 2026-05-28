@@ -46,14 +46,6 @@ The core idea is simple: start a session attached to one task, enter immersive f
   - A **"Focus Breach Detected"** modal slides up asking *why* you left
 - Falls back to **Page Visibility API** when fullscreen is unavailable (tab switch detection)
 
-### 🔊 Built-in Soundscapes
-- **Rain** — filtered noise with random amplitude modulation
-- **White Noise** — `AudioContext` + `createBufferSource` with float32 random data
-- **Lo-fi** — simple oscillator chord progression at low volume
-- **Silence** — off
-- All generated via **Web Audio API** — zero external audio files
-- Volume control + preference saved to `localStorage`
-
 ### 🚨 Distraction Signal Log
 - One-click distraction logging during sessions:
   - 📱 Phone · 💬 Chat · 🌐 New Tab · 🔊 Noise · 💭 Thoughts · ⚡ Other
