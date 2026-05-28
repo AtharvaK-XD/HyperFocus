@@ -68,30 +68,34 @@ export function playChime() {
   }
 }
 
-export function loadSessions() {
+export function loadSessions(email = '') {
   try {
-    const raw = localStorage.getItem('fsb-sessions')
+    const key = email ? `fsb-sessions_${email.toLowerCase().trim()}` : 'fsb-sessions'
+    const raw = localStorage.getItem(key)
     return raw ? JSON.parse(raw) : []
   } catch {
     return []
   }
 }
 
-export function saveSessions(sessions) {
-  localStorage.setItem('fsb-sessions', JSON.stringify(sessions))
+export function saveSessions(sessions, email = '') {
+  const key = email ? `fsb-sessions_${email.toLowerCase().trim()}` : 'fsb-sessions'
+  localStorage.setItem(key, JSON.stringify(sessions))
 }
 
-export function loadTasks() {
+export function loadTasks(email = '') {
   try {
-    const raw = localStorage.getItem('fsb-tasks')
+    const key = email ? `fsb-tasks_${email.toLowerCase().trim()}` : 'fsb-tasks'
+    const raw = localStorage.getItem(key)
     return raw ? JSON.parse(raw) : []
   } catch {
     return []
   }
 }
 
-export function saveTasks(tasks) {
-  localStorage.setItem('fsb-tasks', JSON.stringify(tasks))
+export function saveTasks(tasks, email = '') {
+  const key = email ? `fsb-tasks_${email.toLowerCase().trim()}` : 'fsb-tasks'
+  localStorage.setItem(key, JSON.stringify(tasks))
 }
 
 export const DEFAULT_TIMER_PREFS = {
@@ -119,9 +123,10 @@ export function combineMinSec(minutes, seconds) {
   return clampDuration((Number(minutes) || 0) * 60 + (Number(seconds) || 0))
 }
 
-export function loadTimerPrefs() {
+export function loadTimerPrefs(email = '') {
   try {
-    const raw = localStorage.getItem('fsb-timer-prefs')
+    const key = email ? `fsb-timer-prefs_${email.toLowerCase().trim()}` : 'fsb-timer-prefs'
+    const raw = localStorage.getItem(key)
     if (!raw) return { ...DEFAULT_TIMER_PREFS, presets: [...DEFAULT_TIMER_PREFS.presets] }
     const parsed = JSON.parse(raw)
     return {
@@ -135,8 +140,9 @@ export function loadTimerPrefs() {
   }
 }
 
-export function saveTimerPrefs(prefs) {
-  localStorage.setItem('fsb-timer-prefs', JSON.stringify(prefs))
+export function saveTimerPrefs(prefs, email = '') {
+  const key = email ? `fsb-timer-prefs_${email.toLowerCase().trim()}` : 'fsb-timer-prefs'
+  localStorage.setItem(key, JSON.stringify(prefs))
 }
 
 export function calcStreak(sessions) {
@@ -291,17 +297,19 @@ export const DEFAULT_DAILY_GOAL = {
   goalSeconds: 3600,
 }
 
-export function loadDailyGoal() {
+export function loadDailyGoal(email = '') {
   try {
-    const raw = localStorage.getItem('fsb-daily-goal')
+    const key = email ? `fsb-daily-goal_${email.toLowerCase().trim()}` : 'fsb-daily-goal'
+    const raw = localStorage.getItem(key)
     return raw ? { ...DEFAULT_DAILY_GOAL, ...JSON.parse(raw) } : { ...DEFAULT_DAILY_GOAL }
   } catch {
     return { ...DEFAULT_DAILY_GOAL }
   }
 }
 
-export function saveDailyGoal(goal) {
-  localStorage.setItem('fsb-daily-goal', JSON.stringify(goal))
+export function saveDailyGoal(goal, email = '') {
+  const key = email ? `fsb-daily-goal_${email.toLowerCase().trim()}` : 'fsb-daily-goal'
+  localStorage.setItem(key, JSON.stringify(goal))
 }
 
 export const GOAL_PRESETS = [

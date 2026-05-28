@@ -7,6 +7,8 @@ export default function TopBar({
   dailyGoal,
   onDailyGoalChange,
   todayFocusSeconds,
+  email,
+  onConnectClick,
 }) {
   const [now, setNow] = useState(new Date())
   const [settingsOpen, setSettingsOpen] = useState(false)
@@ -65,9 +67,62 @@ export default function TopBar({
           HYPER FOCUS
         </h1>
         <div className="flex items-center gap-3">
-          <span className="hidden sm:flex font-dm text-[10px] text-[var(--text-muted)]">
+          <span className="hidden lg:flex font-dm text-[10px] text-[var(--text-muted)]">
             {dateStr} · {timeStr}
           </span>
+
+          {streak > 0 && (
+            <span
+              className="px-2.5 py-1.5 rounded-lg border font-dm text-[9px] flex items-center gap-1 font-bold"
+              style={{
+                borderColor: 'rgba(255, 184, 0, 0.3)',
+                background: 'rgba(255, 184, 0, 0.05)',
+                color: 'var(--neon-amber)',
+                boxShadow: '0 0 8px rgba(255, 184, 0, 0.1)',
+              }}
+            >
+              🔥 {streak} {streak === 1 ? 'DAY' : 'DAYS'}
+            </span>
+          )}
+
+          {email ? (
+            <button
+              onClick={onConnectClick}
+              className="px-3 py-1.5 rounded-lg border font-dm text-[9px] transition-all flex items-center gap-1.5 font-bold uppercase cursor-pointer"
+              style={{
+                borderColor: 'rgba(0, 245, 212, 0.4)',
+                background: 'rgba(0, 245, 212, 0.05)',
+                color: 'var(--neon-cyan)',
+                boxShadow: '0 0 10px rgba(0, 245, 212, 0.15)',
+              }}
+            >
+              👤 {email.length > 18 ? `${email.slice(0, 15)}...` : email}
+            </button>
+          ) : (
+            <button
+              onClick={onConnectClick}
+              className="px-3 py-1.5 rounded-lg border font-dm text-[9px] transition-all flex items-center gap-1.5 font-bold animate-pulse hover:animate-none uppercase cursor-pointer"
+              style={{
+                borderColor: 'rgba(123, 47, 255, 0.4)',
+                background: 'rgba(123, 47, 255, 0.05)',
+                color: 'var(--neon-violet)',
+                boxShadow: '0 0 10px rgba(123, 47, 255, 0.1)',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = 'var(--neon-cyan)';
+                e.currentTarget.style.color = 'var(--neon-cyan)';
+                e.currentTarget.style.boxShadow = '0 0 12px rgba(0, 245, 212, 0.3)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = 'rgba(123, 47, 255, 0.4)';
+                e.currentTarget.style.color = 'var(--neon-violet)';
+                e.currentTarget.style.boxShadow = '0 0 10px rgba(123, 47, 255, 0.1)';
+              }}
+            >
+              👤 SYNC PROFILE
+            </button>
+          )}
+
           <div className="flex items-center gap-2">
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />

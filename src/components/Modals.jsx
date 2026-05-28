@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { AlertTriangle } from 'lucide-react'
+import { AlertTriangle, Mail, CheckCircle2, Cpu, LogOut, Check } from 'lucide-react'
 import confetti from 'canvas-confetti'
 import FocusScoreDisplay from './FocusScoreDisplay'
 import {
@@ -288,3 +288,346 @@ export function SummaryModal({
     </AnimatePresence>
   )
 }
+
+export function NeuralIdentityModal({
+  open,
+  currentEmail,
+  hasLocalData,
+  emailHasData,
+  onConnect,
+  onDisconnect,
+  onClose,
+}) {
+  const [emailInput, setEmailInput] = useState('')
+  const [step, setStep] = useState('input') // 'input' | 'syncing' | 'mergePrompt' | 'connected'
+  const [syncStage, setSyncStage] = useState(0)
+  const [errorMsg, setErrorMsg] = useState('')
+
+  const syncLogs = [
+    'ESTABLISHING NEURAL LINK...',
+    'DECRYPTING REMOTE ARCHIVES...',
+    'SYNCING TASK NEXUS...',
+    'ANCHORING FOCUS STREAK...',
+    'IDENTITY SYNC COMPLETE.'
+  ]
+
+  useEffect(() => {
+    if (open) {
+      if (currentEmail) {
+        setStep('connected')
+      } else {
+        setStep('input')
+        setEmailInput('')
+        setErrorMsg('')
+        setSyncStage(0)
+      }
+    }
+  }, [open, currentEmail])
+
+  useEffect(() => {
+    if (step === 'syncing') {
+      const interval = setInterval(() => {
+        setSyncStage((prev) => {
+          if (prev < syncLogs.length - 1) {
+            return prev + 1
+          } else {
+            clearInterval(interval)
+            // Sync complete logic
+            const emailClean = emailInput.toLowerCase().trim()
+            const exists = emailHasData(emailClean)
+            if (hasLocalData && !exists) {
+              setStep('mergePrompt')
+            } else {
+              onConnect(emailClean, false)
+              confetti({
+                particleCount: 80,
+                spread: 50,
+                origin: { y: 0.6 },
+                colors: ['#00f5d4', '#7b2fff'],
+              })
+              onClose()
+            }
+            return prev
+          }
+        })
+      }, 350)
+      return () => clearInterval(interval)
+    }
+  }, [step, emailInput, hasLocalData, emailHasData, onConnect, onClose])
+
+  const handleConnectClick = (e) => {
+    e.preventDefault()
+    const emailClean = emailInput.trim()
+    if (!emailClean) {
+      setErrorMsg('Email signature required')
+      return
+    }
+    const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!regex.test(emailClean)) {
+      setErrorMsg('Invalid quantum address format')
+      return
+    }
+    setErrorMsg('')
+    setSyncStage(0)
+    setStep('syncing')
+  }
+
+  const handleMergeAction = (shouldMerge) => {
+    onConnect(emailInput.toLowerCase().trim(), shouldMerge)
+    confetti({
+      particleCount: 100,
+      spread: 60,
+      origin: { y: 0.6 },
+      colors: ['#00f5d4', '#7b2fff', '#ffb800'],
+    })
+    onClose()
+  }
+
+  return (
+    <AnimatePresence>
+      {open && (
+        <>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[90] backdrop-blur-md"
+            style={{ background: 'rgba(4,5,10,0.85)' }}
+            onClick={onClose}
+          />
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.9, opacity: 0 }}
+            transition={{ type: 'spring', stiffness: 280, damping: 24 }}
+            className="fixed inset-0 z-[95] flex items-center justify-center p-4 pointer-events-none"
+          >
+            <div
+              className="glass-card p-6 max-w-sm w-full pointer-events-auto"
+              style={{
+                background: 'var(--bg-elevated)',
+                border: '1px solid var(--glass-border)',
+                boxShadow: '0 0 30px rgba(0, 245, 212, 0.1)',
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* STEP: INPUT EMAIL */}
+              {step === 'input' && (
+                <form onSubmit={handleConnectClick}>
+                  <div className="flex flex-col items-center mb-4 text-center">
+                    <div
+                      className="w-10 h-10 rounded-full border flex items-center justify-center mb-2"
+                      style={{
+                        borderColor: 'var(--neon-cyan)',
+                        background: 'rgba(0, 245, 212, 0.1)',
+                        boxShadow: '0 0 10px rgba(0, 245, 212, 0.3)',
+                      }}
+                    >
+                      <Cpu size={18} style={{ color: 'var(--neon-cyan)' }} />
+                    </div>
+                    <h2 className="font-orbitron text-sm md:text-base text-[var(--neon-cyan)] tracking-wider uppercase font-semibold">
+                      SYNC NEURAL IDENTITY
+                    </h2>
+                    <p className="font-dm text-[10px] text-[var(--text-muted)] mt-1.5 leading-relaxed">
+                      Scope your daily streaks, focus minutes, and tasks to your email. Sync seamlessly across reload cycles.
+                    </p>
+                  </div>
+
+                  <div className="space-y-3 font-dm">
+                    <div className="relative">
+                      <Mail
+                        size={14}
+                        className="absolute left-3 top-1/2 -translate-y-1/2"
+                        style={{ color: 'var(--text-muted)' }}
+                      />
+                      <input
+                        type="email"
+                        placeholder="agent@nebula.io"
+                        value={emailInput}
+                        onChange={(e) => {
+                          setEmailInput(e.target.value)
+                          if (errorMsg) setErrorMsg('')
+                        }}
+                        className="w-full pl-9 pr-3 py-2 rounded-lg text-xs font-dm bg-[var(--bg-void)] border text-[var(--text-primary)] transition-colors focus:border-[var(--neon-cyan)]"
+                        style={{ borderColor: errorMsg ? 'var(--neon-rose)' : 'var(--glass-border)' }}
+                      />
+                    </div>
+                    {errorMsg && (
+                      <p className="text-[var(--neon-rose)] text-[9px] font-dm text-center uppercase tracking-wide">
+                        ⚡ {errorMsg}
+                      </p>
+                    )}
+                    <motion.button
+                      type="submit"
+                      whileTap={{ scale: 0.97 }}
+                      className="w-full py-2.5 rounded-lg font-orbitron text-xs font-bold tracking-wider"
+                      style={{
+                        background: 'linear-gradient(135deg, var(--neon-cyan), var(--neon-violet))',
+                        color: 'var(--bg-void)',
+                        boxShadow: '0 0 12px rgba(0, 245, 212, 0.25)',
+                      }}
+                    >
+                      CONNECT NEURAL NODE
+                    </motion.button>
+                  </div>
+                </form>
+              )}
+
+              {/* STEP: SYNCING ANIMATION */}
+              {step === 'syncing' && (
+                <div className="flex flex-col items-center py-6 text-center">
+                  {/* Cyber Spinner */}
+                  <div className="relative w-16 h-16 mb-6">
+                    <motion.div
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 1.5, repeat: Infinity, ease: 'linear' }}
+                      className="absolute inset-0 rounded-full border-2 border-transparent border-t-[var(--neon-cyan)] border-b-[var(--neon-violet)]"
+                    />
+                    <div className="absolute inset-2 rounded-full border border-dashed border-[var(--glass-border)] flex items-center justify-center">
+                      <Cpu size={14} className="animate-pulse" style={{ color: 'var(--neon-cyan)' }} />
+                    </div>
+                  </div>
+
+                  <h3 className="font-orbitron text-xs text-[var(--text-primary)] font-bold tracking-widest uppercase mb-4">
+                    ESTABLISHING PROTOCOL
+                  </h3>
+
+                  {/* Terminal log streams */}
+                  <div className="w-full p-3 rounded-lg bg-[var(--bg-void)] border border-[var(--glass-border)] font-dm text-[9px] text-left min-h-[76px] space-y-1 overflow-hidden">
+                    {syncLogs.slice(0, syncStage + 1).map((log, index) => (
+                      <motion.div
+                        key={log}
+                        initial={{ opacity: 0, x: -5 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        className={index === syncStage ? 'text-[var(--neon-cyan)]' : 'text-[var(--text-muted)]'}
+                      >
+                        {index === syncStage ? '> ' : '✓ '} {log}
+                      </motion.div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* STEP: DATA MERGE DIALOG */}
+              {step === 'mergePrompt' && (
+                <div className="flex flex-col text-center">
+                  <div
+                    className="w-10 h-10 rounded-full border flex items-center justify-center mb-2 mx-auto"
+                    style={{
+                      borderColor: 'var(--neon-amber)',
+                      background: 'rgba(255, 184, 0, 0.1)',
+                      boxShadow: '0 0 10px rgba(255, 184, 0, 0.25)',
+                    }}
+                  >
+                    <AlertTriangle size={18} style={{ color: 'var(--neon-amber)' }} />
+                  </div>
+                  <h2 className="font-orbitron text-sm text-[var(--neon-amber)] tracking-wider uppercase font-semibold">
+                    LOCAL SECTORS DETECTED
+                  </h2>
+                  <p className="font-dm text-[10px] text-[var(--text-muted)] mt-2 leading-relaxed">
+                    You have active Guest tasks and focus history. Would you like to merge them into <strong className="text-[var(--text-primary)]">{emailInput}</strong> to keep your streak, or start fresh?
+                  </p>
+
+                  <div className="space-y-2 mt-4 font-orbitron">
+                    <motion.button
+                      type="button"
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => handleMergeAction(true)}
+                      className="w-full py-2.5 rounded-lg text-xs font-bold tracking-wider"
+                      style={{
+                        background: 'var(--neon-cyan)',
+                        color: 'var(--bg-void)',
+                        boxShadow: '0 0 10px rgba(0, 245, 212, 0.25)',
+                      }}
+                    >
+                      MERGE LOCAL DATA
+                    </motion.button>
+                    <motion.button
+                      type="button"
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => handleMergeAction(false)}
+                      className="w-full py-2.5 rounded-lg text-xs font-bold tracking-wider border"
+                      style={{
+                        borderColor: 'var(--glass-border)',
+                        color: 'var(--text-muted)',
+                      }}
+                    >
+                      START CLEAN
+                    </motion.button>
+                  </div>
+                </div>
+              )}
+
+              {/* STEP: CONNECTED PROFILE */}
+              {step === 'connected' && (
+                <div className="flex flex-col items-center text-center">
+                  <div
+                    className="w-10 h-10 rounded-full border flex items-center justify-center mb-2"
+                    style={{
+                      borderColor: 'rgba(74, 222, 128, 0.8)',
+                      background: 'rgba(74, 222, 128, 0.1)',
+                      boxShadow: '0 0 10px rgba(74, 222, 128, 0.3)',
+                    }}
+                  >
+                    <CheckCircle2 size={18} style={{ color: '#4ade80' }} />
+                  </div>
+                  <h2 className="font-orbitron text-sm text-[#4ade80] tracking-wider uppercase font-semibold">
+                    NEURAL LINK ESTABLISHED
+                  </h2>
+                  <p className="font-dm text-[10px] text-[var(--text-muted)] mt-1 mb-4 leading-relaxed">
+                    System operations and streaks are secured under the email signature:
+                  </p>
+
+                  <div
+                    className="px-4 py-2 rounded-lg border font-dm text-xs text-[var(--neon-cyan)] w-full mb-6 text-center select-all cursor-pointer font-bold break-all"
+                    style={{
+                      borderColor: 'var(--glass-border)',
+                      background: 'var(--bg-void)',
+                    }}
+                  >
+                    👤 {currentEmail}
+                  </div>
+
+                  <div className="flex gap-2 w-full font-orbitron">
+                    <motion.button
+                      type="button"
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => {
+                        setStep('input')
+                        setEmailInput('')
+                        setErrorMsg('')
+                      }}
+                      className="flex-1 py-2.5 rounded-lg text-[10px] border tracking-wider font-bold"
+                      style={{
+                        borderColor: 'var(--glass-border)',
+                        color: 'var(--text-primary)',
+                      }}
+                    >
+                      SWITCH SIGNATURE
+                    </motion.button>
+                    <motion.button
+                      type="button"
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => {
+                        onDisconnect()
+                        onClose()
+                      }}
+                      className="flex-1 py-2.5 rounded-lg text-[10px] border tracking-wider font-bold flex items-center justify-center gap-1"
+                      style={{
+                        borderColor: 'var(--neon-rose)',
+                        color: 'var(--neon-rose)',
+                      }}
+                    >
+                      <LogOut size={10} /> DISCONNECT
+                    </motion.button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
+  )
+}
+

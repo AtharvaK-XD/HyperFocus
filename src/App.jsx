@@ -8,7 +8,7 @@ import SignalLog from './components/SignalLog'
 import SessionArchive from './components/SessionArchive'
 import FocusHeatmap from './components/FocusHeatmap'
 import FocusLockOverlay from './components/FocusLockOverlay'
-import { Toast, BreachModal, SummaryModal, StreakAlert } from './components/Modals'
+import { Toast, BreachModal, SummaryModal, StreakAlert, NeuralIdentityModal } from './components/Modals'
 import { useInterval } from './hooks/useInterval'
 
 // Wellness Components
@@ -47,12 +47,15 @@ const containerVariants = {
 }
 
 export default function App() {
-  const [tasks, setTasks] = useState(loadTasks)
-  const [sessions, setSessions] = useState(loadSessions)
+  const [email, setEmail] = useState(() => localStorage.getItem('fsb-active-email') || '')
+  const [showIdentityModal, setShowIdentityModal] = useState(false)
+
+  const [tasks, setTasks] = useState(() => loadTasks(localStorage.getItem('fsb-active-email') || ''))
+  const [sessions, setSessions] = useState(() => loadSessions(localStorage.getItem('fsb-active-email') || ''))
   const [activeTaskId, setActiveTaskId] = useState(null)
   const [taskFilter, setTaskFilter] = useState('ALL')
 
-  const initialTimerPrefs = loadTimerPrefs()
+  const initialTimerPrefs = loadTimerPrefs(localStorage.getItem('fsb-active-email') || '')
   const initialPreset = initialTimerPrefs.presets.find(
     (p) => p.id === initialTimerPrefs.activePresetId
   ) || initialTimerPrefs.presets[0]
@@ -77,14 +80,16 @@ export default function App() {
 
   const [shakeTasks, setShakeTasks] = useState(false)
   const [toast, setToast] = useState('')
-  const [dailyGoal, setDailyGoal] = useState(loadDailyGoal)
+  const [dailyGoal, setDailyGoal] = useState(() => loadDailyGoal(localStorage.getItem('fsb-active-email') || ''))
   const [streakAlert, setStreakAlert] = useState(null)
   const [mobileLeft, setMobileLeft] = useState(false)
   const [mobileRight, setMobileRight] = useState(false)
   
   // --- Wellness State Hooks ---
   const [userSettings, setUserSettings] = useState(() => {
-    const stored = localStorage.getItem('userSettings')
+    const activeEmail = localStorage.getItem('fsb-active-email') || ''
+    const key = activeEmail ? `userSettings_${activeEmail.toLowerCase().trim()}` : 'userSettings'
+    const stored = localStorage.getItem(key)
     if (stored) {
       try {
         return JSON.parse(stored)
@@ -98,8 +103,9 @@ export default function App() {
   })
 
   useEffect(() => {
-    localStorage.setItem('userSettings', JSON.stringify(userSettings))
-  }, [userSettings])
+    const key = email ? `userSettings_${email.toLowerCase().trim()}` : 'userSettings'
+    localStorage.setItem(key, JSON.stringify(userSettings))
+  }, [userSettings, email])
 
   const [breathingActive, setBreathingActive] = useState(false)
   const [postureAlertActive, setPostureAlertActive] = useState(false)
@@ -118,12 +124,15 @@ export default function App() {
 
   // --- Onboarding Flow States ---
   const [onboardingActive, setOnboardingActive] = useState(() => {
-    return localStorage.getItem('onboardingComplete') === null
+    const activeEmail = localStorage.getItem('fsb-active-email') || ''
+    const key = activeEmail ? `onboardingComplete_${activeEmail.toLowerCase().trim()}` : 'onboardingComplete'
+    return localStorage.getItem(key) === null
   })
   const [welcomeToast, setWelcomeToast] = useState(false)
 
   const handleOnboardingComplete = (settings) => {
-    localStorage.setItem('onboardingComplete', 'true')
+    const onboardingKey = email ? `onboardingComplete_${email.toLowerCase().trim()}` : 'onboardingComplete'
+    localStorage.setItem(onboardingKey, 'true')
     
     const nextSettings = {
       ...userSettings,
@@ -132,7 +141,8 @@ export default function App() {
       soundscape: settings.soundscape,
     }
     setUserSettings(nextSettings)
-    localStorage.setItem('userSettings', JSON.stringify(nextSettings))
+    const settingsKey = email ? `userSettings_${email.toLowerCase().trim()}` : 'userSettings'
+    localStorage.setItem(settingsKey, JSON.stringify(nextSettings))
 
     // Apply daily focus goal setting
     const goalSecs = settings.dailyGoalHours * 3600
@@ -141,7 +151,7 @@ export default function App() {
       goalSeconds: goalSecs,
     }
     setDailyGoal(nextGoal)
-    saveDailyGoal(nextGoal)
+    saveDailyGoal(nextGoal, email)
 
     // Apply default session duration
     const activeSecs = settings.defaultSessionMinutes * 60
@@ -154,6 +164,159 @@ export default function App() {
     // Show neural link established welcome toast
     setWelcomeToast(true)
     setTimeout(() => setWelcomeToast(false), 4000)
+  }
+
+  const handleConnectEmail = (newEmail, shouldMerge) => {
+    const cleanEmail = newEmail.toLowerCase().trim()
+    
+    if (shouldMerge) {
+      // Load current local guest data
+      const guestTasks = loadTasks('')
+      const guestSessions = loadSessions('')
+
+      // Load target email data
+      const emailTasks = loadTasks(cleanEmail)
+      const emailSessions = loadSessions(cleanEmail)
+
+      // Merge arrays uniquely
+      const mergedTasks = [...guestTasks, ...emailTasks].filter(
+        (t, idx, self) => self.findIndex((x) => x.id === t.id) === idx
+      )
+      const mergedSessions = [...guestSessions, ...emailSessions].filter(
+        (s, idx, self) => self.findIndex((x) => x.id === s.id) === idx
+      )
+
+      // Save merged
+      saveTasks(mergedTasks, cleanEmail)
+      saveSessions(mergedSessions, cleanEmail)
+
+      // Also migrate settings if target email doesn't have them
+      const emailGoalKey = `fsb-daily-goal_${cleanEmail}`
+      if (!localStorage.getItem(emailGoalKey)) {
+        saveDailyGoal(loadDailyGoal(''), cleanEmail)
+      }
+      const emailPrefsKey = `fsb-timer-prefs_${cleanEmail}`
+      if (!localStorage.getItem(emailPrefsKey)) {
+        saveTimerPrefs(loadTimerPrefs(''), cleanEmail)
+      }
+      const emailSettingsKey = `userSettings_${cleanEmail}`
+      if (!localStorage.getItem(emailSettingsKey)) {
+        const guestSettings = localStorage.getItem('userSettings')
+        if (guestSettings) {
+          localStorage.setItem(emailSettingsKey, guestSettings)
+        }
+      }
+      const emailOnboardingKey = `onboardingComplete_${cleanEmail}`
+      if (!localStorage.getItem(emailOnboardingKey) && localStorage.getItem('onboardingComplete')) {
+        localStorage.setItem(emailOnboardingKey, 'true')
+      }
+    }
+
+    // Set active email state and local storage
+    setEmail(cleanEmail)
+    localStorage.setItem('fsb-active-email', cleanEmail)
+
+    // Reload all state variables based on target email
+    const loadedTasks = loadTasks(cleanEmail)
+    const loadedSessions = loadSessions(cleanEmail)
+    const loadedGoal = loadDailyGoal(cleanEmail)
+    const loadedPrefs = loadTimerPrefs(cleanEmail)
+
+    setTasks(loadedTasks)
+    setSessions(loadedSessions)
+    setDailyGoal(loadedGoal)
+    setTimerPrefs(loadedPrefs)
+
+    // Reload settings
+    const storedSettings = localStorage.getItem(`userSettings_${cleanEmail}`)
+    if (storedSettings) {
+      try {
+        setUserSettings(JSON.parse(storedSettings))
+      } catch (e) {}
+    } else {
+      setUserSettings({
+        dnd: false,
+        postureInterval: 30,
+        hydrationThreshold: 90,
+      })
+    }
+
+    // Reload onboarding completion
+    const onboardingCompleteVal = localStorage.getItem(`onboardingComplete_${cleanEmail}`)
+    setOnboardingActive(onboardingCompleteVal === null)
+
+    // Reload duration/remaining if not active
+    if (!isRunning && !isPaused) {
+      const activePreset = loadedPrefs.presets.find(
+        (p) => p.id === loadedPrefs.activePresetId
+      ) || loadedPrefs.presets[0]
+      const activeSecs = clampDuration((activePreset?.minutes || 25) * 60)
+      setDuration(activeSecs)
+      setRemaining(activeSecs)
+    }
+
+    setToast(`Neural link sync complete: Profile ${cleanEmail} loaded`)
+    setTimeout(() => setToast(''), 4000)
+  }
+
+  const handleDisconnectEmail = () => {
+    setEmail('')
+    localStorage.removeItem('fsb-active-email')
+
+    // Reload guest data
+    const guestTasks = loadTasks('')
+    const guestSessions = loadSessions('')
+    const guestGoal = loadDailyGoal('')
+    const guestPrefs = loadTimerPrefs('')
+
+    setTasks(guestTasks)
+    setSessions(guestSessions)
+    setDailyGoal(guestGoal)
+    setTimerPrefs(guestPrefs)
+
+    // Reload guest settings
+    const storedSettings = localStorage.getItem('userSettings')
+    if (storedSettings) {
+      try {
+        setUserSettings(JSON.parse(storedSettings))
+      } catch (e) {}
+    } else {
+      setUserSettings({
+        dnd: false,
+        postureInterval: 30,
+        hydrationThreshold: 90,
+      })
+    }
+
+    // Reload guest onboarding completion
+    setOnboardingActive(localStorage.getItem('onboardingComplete') === null)
+
+    if (!isRunning && !isPaused) {
+      const activePreset = guestPrefs.presets.find(
+        (p) => p.id === guestPrefs.activePresetId
+      ) || guestPrefs.presets[0]
+      const activeSecs = clampDuration((activePreset?.minutes || 25) * 60)
+      setDuration(activeSecs)
+      setRemaining(activeSecs)
+    }
+
+    setToast('Neural profile disconnected. Fallback to Guest session.')
+    setTimeout(() => setToast(''), 4000)
+  }
+
+  const emailHasData = (testEmail) => {
+    const cleanEmail = testEmail.toLowerCase().trim()
+    const tasksKey = `fsb-tasks_${cleanEmail}`
+    const sessionsKey = `fsb-sessions_${cleanEmail}`
+    const hasTasks = localStorage.getItem(tasksKey) && JSON.parse(localStorage.getItem(tasksKey)).length > 0
+    const hasSessions = localStorage.getItem(sessionsKey) && JSON.parse(localStorage.getItem(sessionsKey)).length > 0
+    return !!(hasTasks || hasSessions)
+  }
+
+  const hasLocalData = () => {
+    const guestTasks = loadTasks('')
+    const guestSessions = loadSessions('')
+    return guestTasks.length > 0 || guestSessions.length > 0
   }
 
   const streakAlertShownRef = useRef(false)
@@ -185,8 +348,8 @@ export default function App() {
   focusLockActiveRef.current = focusLockActive
 
   useEffect(() => {
-    saveTasks(tasks)
-  }, [tasks])
+    saveTasks(tasks, email)
+  }, [tasks, email])
 
   const applyDuration = useCallback(
     (seconds, { adjustRemaining = false } = {}) => {
@@ -209,7 +372,7 @@ export default function App() {
       const secs = clampDuration(preset.minutes * 60)
       const next = { ...timerPrefs, activePresetId: presetId }
       setTimerPrefs(next)
-      saveTimerPrefs(next)
+      saveTimerPrefs(next, email)
       if (!isRunning && !isPaused) {
         setDuration(secs)
         setRemaining(secs)
@@ -218,19 +381,19 @@ export default function App() {
         setDuration(sessionElapsed + secs)
       }
     },
-    [timerPrefs, isRunning, isPaused, sessionElapsed]
+    [timerPrefs, isRunning, isPaused, sessionElapsed, email]
   )
 
   const handleSaveTimerPrefs = useCallback((prefs) => {
     setTimerPrefs(prefs)
-    saveTimerPrefs(prefs)
+    saveTimerPrefs(prefs, email)
     const active = prefs.presets.find((p) => p.id === prefs.activePresetId)
     if (active && !isRunning && !isPaused) {
       const secs = clampDuration(active.minutes * 60)
       setDuration(secs)
       setRemaining(secs)
     }
-  }, [isRunning, isPaused])
+  }, [isRunning, isPaused, email])
 
   const addDistraction = useCallback((type, isAutoLogged = false) => {
     setDistractions((prev) => [
@@ -584,7 +747,7 @@ export default function App() {
     }
     const next = [record, ...sessions]
     setSessions(next)
-    saveSessions(next)
+    saveSessions(next, email)
 
     if (pendingSession.taskId) {
       setTasks((prev) =>
@@ -641,9 +804,11 @@ export default function App() {
           dailyGoal={dailyGoal}
           onDailyGoalChange={(goal) => {
             setDailyGoal(goal)
-            saveDailyGoal(goal)
+            saveDailyGoal(goal, email)
           }}
           todayFocusSeconds={todayFocusSeconds}
+          email={email}
+          onConnectClick={() => setShowIdentityModal(true)}
         />
 
         <motion.div
@@ -784,6 +949,16 @@ export default function App() {
       />
 
       <Toast message={toast} onClose={() => setToast('')} />
+
+      <NeuralIdentityModal
+        open={showIdentityModal}
+        currentEmail={email}
+        hasLocalData={hasLocalData()}
+        emailHasData={emailHasData}
+        onConnect={handleConnectEmail}
+        onDisconnect={handleDisconnectEmail}
+        onClose={() => setShowIdentityModal(false)}
+      />
 
       {/* --- Wellness Components & Modals Mounts --- */}
       <MoodCheckIn
