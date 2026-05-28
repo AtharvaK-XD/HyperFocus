@@ -246,6 +246,18 @@ export function SummaryModal({
                 {sessionData.completedFull && (
                   <p className="text-[#4ade80] text-xs">Full session completed ✓</p>
                 )}
+                {sessionData.mood && (
+                  <p className="text-[var(--text-muted)] text-xs mt-1">
+                    You started this session feeling{' '}
+                    <span className="text-[var(--neon-cyan)] uppercase font-semibold">
+                      {sessionData.mood === 'tired' && '😴 TIRED'}
+                      {sessionData.mood === 'neutral' && '😐 NEUTRAL'}
+                      {sessionData.mood === 'good' && '🙂 GOOD'}
+                      {sessionData.mood === 'energized' && '⚡ ENERGIZED'}
+                      {sessionData.mood === 'in_the_zone' && '🔥 IN THE ZONE'}
+                    </span>
+                  </p>
+                )}
               </div>
               <label className="font-dm text-[10px] text-[var(--text-muted)] block mb-1">
                 What went well?

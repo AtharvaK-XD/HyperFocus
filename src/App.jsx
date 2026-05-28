@@ -10,6 +10,15 @@ import FocusHeatmap from './components/FocusHeatmap'
 import FocusLockOverlay from './components/FocusLockOverlay'
 import { Toast, BreachModal, SummaryModal, StreakAlert } from './components/Modals'
 import { useInterval } from './hooks/useInterval'
+
+// Wellness Components
+import BreathingExercise from './components/Wellness/BreathingExercise'
+import PostureReminder from './components/Wellness/PostureReminder'
+import HydrationReminder from './components/Wellness/HydrationReminder'
+import EyeRestAlert from './components/Wellness/EyeRestAlert'
+import MoodCheckIn from './components/Wellness/MoodCheckIn'
+import OnboardingOverlay from './components/Wellness/OnboardingOverlay'
+
 import {
   loadSessions,
   saveSessions,
@@ -72,6 +81,81 @@ export default function App() {
   const [streakAlert, setStreakAlert] = useState(null)
   const [mobileLeft, setMobileLeft] = useState(false)
   const [mobileRight, setMobileRight] = useState(false)
+  
+  // --- Wellness State Hooks ---
+  const [userSettings, setUserSettings] = useState(() => {
+    const stored = localStorage.getItem('userSettings')
+    if (stored) {
+      try {
+        return JSON.parse(stored)
+      } catch (e) {}
+    }
+    return {
+      dnd: false,
+      postureInterval: 30, // in minutes
+      hydrationThreshold: 90, // in minutes
+    }
+  })
+
+  useEffect(() => {
+    localStorage.setItem('userSettings', JSON.stringify(userSettings))
+  }, [userSettings])
+
+  const [breathingActive, setBreathingActive] = useState(false)
+  const [postureAlertActive, setPostureAlertActive] = useState(false)
+  const [postureMessageIndex, setPostureMessageIndex] = useState(0)
+
+  const [hydrationAlertActive, setHydrationAlertActive] = useState(false)
+  const [hydrationSnoozed, setHydrationSnoozed] = useState(false)
+  const [hydrationNextTriggerTime, setHydrationNextTriggerTime] = useState(null)
+
+  const [eyeRestActive, setEyeRestActive] = useState(false)
+  const [eyeRestRemaining, setEyeRestRemaining] = useState(20)
+  const wasRunningBeforeEyeRestRef = useRef(false)
+
+  const [moodModalActive, setMoodModalActive] = useState(false)
+  const [currentSessionMood, setCurrentSessionMood] = useState(null)
+
+  // --- Onboarding Flow States ---
+  const [onboardingActive, setOnboardingActive] = useState(() => {
+    return localStorage.getItem('onboardingComplete') === null
+  })
+  const [welcomeToast, setWelcomeToast] = useState(false)
+
+  const handleOnboardingComplete = (settings) => {
+    localStorage.setItem('onboardingComplete', 'true')
+    
+    const nextSettings = {
+      ...userSettings,
+      dailyGoalHours: settings.dailyGoalHours,
+      defaultSessionMinutes: settings.defaultSessionMinutes,
+      soundscape: settings.soundscape,
+    }
+    setUserSettings(nextSettings)
+    localStorage.setItem('userSettings', JSON.stringify(nextSettings))
+
+    // Apply daily focus goal setting
+    const goalSecs = settings.dailyGoalHours * 3600
+    const nextGoal = {
+      preset: settings.dailyGoalHours === 1 ? '1hr' : settings.dailyGoalHours === 2 ? '2hr' : settings.dailyGoalHours === 4 ? '4hr' : 'custom',
+      goalSeconds: goalSecs,
+    }
+    setDailyGoal(nextGoal)
+    saveDailyGoal(nextGoal)
+
+    // Apply default session duration
+    const activeSecs = settings.defaultSessionMinutes * 60
+    setDuration(activeSecs)
+    setRemaining(activeSecs)
+
+    // Close Onboarding
+    setOnboardingActive(false)
+
+    // Show neural link established welcome toast
+    setWelcomeToast(true)
+    setTimeout(() => setWelcomeToast(false), 4000)
+  }
+
   const streakAlertShownRef = useRef(false)
 
   const userEndingRef = useRef(false)
@@ -179,16 +263,20 @@ export default function App() {
         endedEarly,
         focusScore,
         isPersonalBest: focusScore > prevBest,
+        mood: currentSessionMood, // store the logged mood
       })
       setIsRunning(false)
       setIsPaused(false)
       setFocusLockActive(false)
-      setShowSummaryModal(true)
+      
+      // Auto-trigger breathing exercise overlay first
+      setBreathingActive(true)
+
       if (document.fullscreenElement) {
         document.exitFullscreen().catch(() => {})
       }
     },
-    [tasks, activeTaskId, sessionElapsed, duration, remaining, distractions, sessions]
+    [tasks, activeTaskId, sessionElapsed, duration, remaining, distractions, sessions, currentSessionMood]
   )
 
   const handleTimerComplete = useCallback(() => {
@@ -197,6 +285,34 @@ export default function App() {
     playChime()
     finishSession(true)
   }, [finishSession])
+
+  // --- Daily Minutes localStorage Key Helper ---
+  const getTodayFocusMinutesKey = () => {
+    const todayStr = new Date().toLocaleDateString('sv') // 'YYYY-MM-DD'
+    return `focusMinutes_${todayStr}`
+  }
+
+  const incrementDailyFocusMinutes = () => {
+    const key = getTodayFocusMinutesKey()
+    const current = parseInt(localStorage.getItem(key) || '0', 10)
+    const next = current + 1
+    localStorage.setItem(key, next.toString())
+    return next
+  }
+
+  const triggerEyeRest = () => {
+    wasRunningBeforeEyeRestRef.current = isRunning
+    setIsRunning(false)
+    setEyeRestActive(true)
+    setEyeRestRemaining(20)
+  }
+
+  const skipEyeRest = () => {
+    setEyeRestActive(false)
+    if (wasRunningBeforeEyeRestRef.current) {
+      setIsRunning(true)
+    }
+  }
 
   useInterval(
     () => {
@@ -207,14 +323,80 @@ export default function App() {
         }
         return r - 1
       })
-      setSessionElapsed((e) => e + 1)
+      setSessionElapsed((e) => {
+        const nextElapsed = e + 1
+        
+        // 1. Increment daily focus minutes every 60s
+        if (nextElapsed % 60 === 0) {
+          const nextMins = incrementDailyFocusMinutes()
+          
+          // Check Hydration Threshold triggers (once at threshold, then every 60m)
+          if (!userSettings.dnd) {
+            const thresh = userSettings.hydrationThreshold
+            if (nextMins === thresh || (nextMins > thresh && (nextMins - thresh) % 60 === 0)) {
+              setHydrationAlertActive(true)
+              setHydrationSnoozed(false)
+            }
+          }
+        }
+
+        // 2. Eye Rest triggers every 20 minutes (1200 seconds)
+        if (!userSettings.dnd && nextElapsed % 1200 === 0) {
+          triggerEyeRest()
+        }
+
+        return nextElapsed
+      })
     },
     isRunning && !isPaused ? 1000 : null
   )
 
   useInterval(
-    () => setFocusLockTick((t) => t + 1),
+    () => {
+      setFocusLockTick((t) => {
+        const nextTick = t + 1
+        
+        // 3. Posture Reminder triggers every postureInterval minutes of Focus Lock
+        if (!userSettings.dnd) {
+          const intervalSecs = userSettings.postureInterval * 60
+          if (nextTick > 0 && nextTick % intervalSecs === 0) {
+            setPostureMessageIndex((prev) => prev + 1)
+            setPostureAlertActive(true)
+          }
+        }
+
+        return nextTick
+      })
+    },
     focusLockActive ? 1000 : null
+  )
+
+  // 4. Eye Rest active countdown tick
+  useInterval(
+    () => {
+      setEyeRestRemaining((r) => {
+        if (r <= 1) {
+          setEyeRestActive(false)
+          if (wasRunningBeforeEyeRestRef.current) {
+            setIsRunning(true)
+          }
+          return 20
+        }
+        return r - 1
+      })
+    },
+    eyeRestActive ? 1000 : null
+  )
+
+  // 5. Hydration snooze checker running in the background constantly
+  useInterval(
+    () => {
+      if (hydrationSnoozed && hydrationNextTriggerTime && Date.now() >= hydrationNextTriggerTime) {
+        setHydrationSnoozed(false)
+        setHydrationAlertActive(true)
+      }
+    },
+    1000
   )
 
   const focusLockElapsed =
@@ -318,6 +500,28 @@ export default function App() {
       setTimeout(() => setShakeTasks(false), 600)
       return
     }
+    // Intercept with Mood Modal before starting the session
+    setMoodModalActive(true)
+  }
+
+  const handleMoodSelect = (mood) => {
+    setMoodModalActive(false)
+    setCurrentSessionMood(mood)
+    proceedStartSession()
+  }
+
+  const handleMoodSkip = () => {
+    setMoodModalActive(false)
+    setCurrentSessionMood(null)
+    proceedStartSession()
+  }
+
+  const handleBreathingFinish = () => {
+    setBreathingActive(false)
+    setShowSummaryModal(true)
+  }
+
+  const proceedStartSession = () => {
     setTasks((prev) =>
       prev.map((t) =>
         t.id === activeTaskId ? { ...t, status: 'ACTIVE' } : t
@@ -376,6 +580,7 @@ export default function App() {
       note: note || '',
       completedFullSession: pendingSession.completedFull,
       focusScore: pendingSession.focusScore,
+      mood: pendingSession.mood, // Save session mood
     }
     const next = [record, ...sessions]
     setSessions(next)
@@ -430,7 +635,7 @@ export default function App() {
         focusLockElapsed={focusLockElapsed}
         onExit={() => exitFocusLock(true)}
       />
-      <div className="relative z-10 flex flex-col h-full pl-7 md:pl-8">
+      <div className={`relative z-10 flex flex-col h-full pl-7 md:pl-8 transition-all duration-500 ${onboardingActive ? 'blur-[6px] pointer-events-none' : ''}`}>
         <TopBar
           streak={streak}
           dailyGoal={dailyGoal}
@@ -442,26 +647,34 @@ export default function App() {
         />
 
         <motion.div
+          key={onboardingActive ? 'onboarding' : 'main'}
           className="flex-1 flex flex-col md:flex-row min-h-0 overflow-hidden"
           variants={containerVariants}
           initial="hidden"
           animate="visible"
         >
+          {/* Left Column (Session Archive + Focus Map + Tasks) */}
           <div
-            className={`${mobileLeft ? 'flex' : 'hidden'} md:flex h-[40vh] md:h-full shrink-0`}
+            className={`${mobileLeft ? 'flex' : 'hidden'} md:flex flex-col h-[40vh] md:h-full shrink-0 md:w-[280px] border-r`}
+            style={{ borderColor: 'var(--glass-border)', background: 'var(--bg-surface)' }}
           >
-            <TaskNexus
-              tasks={tasks}
-              setTasks={setTasks}
-              activeTaskId={activeTaskId}
-              setActiveTaskId={setActiveTaskId}
-              filter={taskFilter}
-              setFilter={setTaskFilter}
-              shake={shakeTasks}
-              collapsed={false}
-            />
+            <SessionArchive sessions={sessions} />
+            <FocusHeatmap sessions={sessions} />
+            <div className="flex-1 min-h-0">
+              <TaskNexus
+                tasks={tasks}
+                setTasks={setTasks}
+                activeTaskId={activeTaskId}
+                setActiveTaskId={setActiveTaskId}
+                filter={taskFilter}
+                setFilter={setTaskFilter}
+                shake={shakeTasks}
+                collapsed={false}
+              />
+            </div>
           </div>
 
+          {/* Center Column (Timer Core) */}
           <FocusCore
             remaining={remaining}
             total={duration}
@@ -485,17 +698,26 @@ export default function App() {
             onEnterFocusLock={enterFocusLock}
             distractions={distractions}
             streak={streak}
+            userSettings={userSettings}
+            onSaveUserSettings={setUserSettings}
+            eyeRestActive={eyeRestActive}
+            eyeRestRemaining={eyeRestRemaining}
+            onSkipEyeRest={skipEyeRest}
           />
 
+          {/* Right Column (Log) */}
           <div
-            className={`${mobileRight ? 'flex' : 'hidden'} md:flex h-[40vh] md:h-full shrink-0`}
+            className={`${mobileRight ? 'flex' : 'hidden'} md:flex flex-col h-[40vh] md:h-full shrink-0 md:w-[280px] border-l`}
+            style={{ borderColor: 'var(--glass-border)', background: 'var(--bg-surface)' }}
           >
-            <SignalLog
-              distractions={distractions}
-              onLog={(type) => addDistraction(type, false)}
-              sessionActive={isRunning || isPaused}
-              collapsed={false}
-            />
+            <div className="flex-1 min-h-0">
+              <SignalLog
+                distractions={distractions}
+                onLog={(type) => addDistraction(type, false)}
+                sessionActive={isRunning || isPaused}
+                collapsed={false}
+              />
+            </div>
           </div>
         </motion.div>
 
@@ -540,8 +762,6 @@ export default function App() {
                 LOG
               </button>
             </div>
-        <SessionArchive sessions={sessions} />
-        <FocusHeatmap sessions={sessions} />
       </div>
 
       <BreachModal
@@ -564,6 +784,65 @@ export default function App() {
       />
 
       <Toast message={toast} onClose={() => setToast('')} />
+
+      {/* --- Wellness Components & Modals Mounts --- */}
+      <MoodCheckIn
+        open={moodModalActive}
+        onSelect={handleMoodSelect}
+        onSkip={handleMoodSkip}
+      />
+
+      <BreathingExercise
+        open={breathingActive}
+        onFinish={handleBreathingFinish}
+      />
+
+      <PostureReminder
+        open={postureAlertActive}
+        onClose={() => setPostureAlertActive(false)}
+        messageIndex={postureMessageIndex}
+      />
+
+      <HydrationReminder
+        open={hydrationAlertActive}
+        focusMinutes={parseInt(localStorage.getItem(getTodayFocusMinutesKey()) || '0', 10)}
+        onDone={() => setHydrationAlertActive(false)}
+        onSnooze={() => {
+          setHydrationAlertActive(false)
+          setHydrationSnoozed(true)
+          setHydrationNextTriggerTime(Date.now() + 10 * 60 * 1000) // 10 minutes snooze
+        }}
+      />
+
+      <OnboardingOverlay
+        open={onboardingActive}
+        onComplete={handleOnboardingComplete}
+      />
+
+      <AnimatePresence>
+        {welcomeToast && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, x: 50 }}
+            animate={{ opacity: 1, y: 0, x: 0 }}
+            exit={{ opacity: 0, y: 50 }}
+            className="fixed bottom-6 right-6 z-[210] max-w-sm cursor-pointer"
+            onClick={() => setWelcomeToast(false)}
+          >
+            <div
+              className="glass-card px-4 py-3 font-dm text-xs font-semibold"
+              style={{
+                background: 'rgba(9, 12, 20, 0.95)',
+                borderLeft: '4px solid var(--neon-cyan)',
+                boxShadow: '0 0 20px rgba(0, 245, 212, 0.3)',
+                color: 'var(--text-primary)',
+                borderRadius: '8px',
+              }}
+            >
+              ⚡ Neural link established. Welcome to your focus command center.
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {streakAlert != null && (

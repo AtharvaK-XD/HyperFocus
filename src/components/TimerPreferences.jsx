@@ -16,12 +16,15 @@ export default function TimerPreferences({
   onApplyDuration,
   onSelectPreset,
   onSavePrefs,
+  userSettings,
+  onSaveUserSettings,
 }) {
   const { isRunning, isPaused } = timerState
   const canEdit = !isRunning || isPaused
   const editingRemaining = isPaused
 
   const [expanded, setExpanded] = useState(false)
+  const [wellnessExpanded, setWellnessExpanded] = useState(false)
   const [editPresets, setEditPresets] = useState(false)
   const [draftPresets, setDraftPresets] = useState(timerPrefs.presets)
   const [minutes, setMinutes] = useState(0)
@@ -241,6 +244,127 @@ export default function TimerPreferences({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Wellness Preferences Collapsible Button */}
+      {userSettings && (
+        <>
+          <button
+            type="button"
+            onClick={() => setWellnessExpanded(!wellnessExpanded)}
+            className="w-full flex items-center justify-center gap-2 py-2 font-dm text-[10px] tracking-wider text-[var(--text-muted)] hover:text-[var(--neon-violet)] transition-colors mt-2"
+          >
+            <Settings2 size={14} className="text-[var(--neon-violet)]" />
+            WELLNESS PREFERENCES
+            <motion.span animate={{ rotate: wellnessExpanded ? 180 : 0 }}>
+              <ChevronDown size={14} />
+            </motion.span>
+          </button>
+
+          <AnimatePresence>
+            {wellnessExpanded && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                className="overflow-hidden"
+              >
+                <div
+                  className="glass-card p-4 mt-2 space-y-4"
+                  style={{ background: 'var(--bg-elevated)' }}
+                >
+                  {/* Do Not Disturb Toggle */}
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="font-orbitron text-[9px] tracking-wider text-[var(--text-muted)] uppercase">
+                        DO NOT DISTURB
+                      </h4>
+                      <p className="font-dm text-[8px] text-[var(--text-muted)] mt-0.5">
+                        SUPPRESS WELLNESS NOTIFICATIONS DURING FOCUS
+                      </p>
+                    </div>
+                    <motion.button
+                      type="button"
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => onSaveUserSettings(prev => ({ ...prev, dnd: !prev.dnd }))}
+                      className="font-orbitron text-[9px] px-3 py-1.5 rounded border transition-all"
+                      style={{
+                        borderColor: userSettings.dnd ? 'var(--neon-rose)' : 'var(--glass-border)',
+                        color: userSettings.dnd ? 'var(--neon-rose)' : 'var(--text-muted)',
+                        background: userSettings.dnd ? 'rgba(255,45,107,0.1)' : 'transparent',
+                        boxShadow: userSettings.dnd ? '0 0 10px rgba(255,45,107,0.2)' : 'none',
+                      }}
+                    >
+                      {userSettings.dnd ? 'ACTIVE' : 'INACTIVE'}
+                    </motion.button>
+                  </div>
+
+                  {/* Posture Reminder Interval */}
+                  <div className="space-y-2">
+                    <div>
+                      <h4 className="font-orbitron text-[9px] tracking-wider text-[var(--text-muted)] uppercase">
+                        POSTURE CHECK INTERVAL
+                      </h4>
+                      <p className="font-dm text-[8px] text-[var(--text-muted)] mt-0.5">
+                        TRIGGER REMINDERS EVERY X MINUTES
+                      </p>
+                    </div>
+                    <div className="flex gap-2 justify-center">
+                      {[15, 30, 45, 60].map((mins) => (
+                        <motion.button
+                          key={mins}
+                          type="button"
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => onSaveUserSettings(prev => ({ ...prev, postureInterval: mins }))}
+                          className="font-dm text-[9px] px-2.5 py-1.5 rounded border transition-all"
+                          style={{
+                            borderColor: userSettings.postureInterval === mins ? 'var(--neon-amber)' : 'var(--glass-border)',
+                            color: userSettings.postureInterval === mins ? 'var(--neon-amber)' : 'var(--text-muted)',
+                            background: userSettings.postureInterval === mins ? 'rgba(255,184,0,0.1)' : 'transparent',
+                          }}
+                        >
+                          {mins}M
+                        </motion.button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Hydration Reminder Daily Goal Target */}
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="font-orbitron text-[9px] tracking-wider text-[var(--text-muted)] uppercase">
+                        HYDRATION TARGET
+                      </h4>
+                      <p className="font-dm text-[8px] text-[var(--text-muted)] mt-0.5">
+                        DAILY FOCUS ACCUMULATION: {userSettings.hydrationThreshold} MINS
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <NudgeButton
+                        label="-10m"
+                        onClick={() =>
+                          onSaveUserSettings(prev => ({
+                            ...prev,
+                            hydrationThreshold: Math.max(10, prev.hydrationThreshold - 10),
+                          }))
+                        }
+                      />
+                      <NudgeButton
+                        label="+10m"
+                        onClick={() =>
+                          onSaveUserSettings(prev => ({
+                            ...prev,
+                            hydrationThreshold: prev.hydrationThreshold + 10,
+                          }))
+                        }
+                      />
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </>
+      )}
     </div>
   )
 }

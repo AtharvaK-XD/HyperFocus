@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { Zap, Music, ExternalLink } from 'lucide-react'
 import TimerRing from './TimerRing'
 import TimerPreferences from './TimerPreferences'
 import HoldToEndButton from './HoldToEndButton'
+import EyeRestAlert from './Wellness/EyeRestAlert'
 import { formatTime, formatDuration } from '../utils/helpers'
 
 const panelVariants = {
@@ -28,6 +29,11 @@ export default function FocusCore({
   onEnterFocusLock,
   distractions,
   streak,
+  userSettings,
+  onSaveUserSettings,
+  eyeRestActive,
+  eyeRestRemaining,
+  onSkipEyeRest,
 }) {
   const { isRunning, isPaused } = timerState
   const [rageQuitWarning, setRageQuitWarning] = useState(false)
@@ -58,9 +64,9 @@ export default function FocusCore({
   return (
     <motion.main
       variants={panelVariants}
-      className="flex flex-col h-full flex-1 min-w-0 p-4 md:p-6 overflow-y-auto custom-scroll"
+      className="flex flex-col h-full flex-1 min-w-0 p-4 md:p-6 overflow-y-auto custom-scroll relative"
     >
-      <div className="flex-1 flex flex-col items-center justify-start md:justify-center py-2 gap-3.5 min-h-0 w-full">
+      <div className="flex flex-col items-center justify-start md:justify-center py-2 gap-3.5 min-h-full w-full relative">
         <TimerRing
           remaining={remaining}
           total={total}
@@ -78,7 +84,18 @@ export default function FocusCore({
           onApplyDuration={onApplyDuration}
           onSelectPreset={onSelectPreset}
           onSavePrefs={onSaveTimerPrefs}
+          userSettings={userSettings}
+          onSaveUserSettings={onSaveUserSettings}
         />
+
+        <AnimatePresence>
+          {eyeRestActive && (
+            <EyeRestAlert
+              remaining={eyeRestRemaining}
+              onSkip={onSkipEyeRest}
+            />
+          )}
+        </AnimatePresence>
 
         {/* Spotify Quick Access */}
         <div className="w-full max-w-xs shrink-0">

@@ -51,7 +51,7 @@ export default function SignalLog({
   return (
     <motion.aside
       variants={panelVariants}
-      className="flex flex-col h-full w-full md:w-[320px] shrink-0 glass-card p-4"
+      className="flex flex-col h-full w-full md:w-[280px] shrink-0 glass-card p-4"
       style={{ background: 'var(--bg-surface)' }}
     >
       <header className="mb-4">

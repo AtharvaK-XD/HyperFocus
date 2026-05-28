@@ -12,17 +12,57 @@ export default function FocusHeatmap({ sessions }) {
   const [tooltip, setTooltip] = useState(null)
 
   const days = useMemo(() => buildHeatmapDays(sessions, 90), [sessions])
+  
+  const paddedDays = useMemo(() => {
+    if (!days.length) return []
+    const list = [...days]
+    
+    // Pad start to Sunday (getDay() === 0)
+    const firstDayOfWeek = days[0].date.getDay()
+    if (firstDayOfWeek > 0) {
+      for (let i = firstDayOfWeek - 1; i >= 0; i--) {
+        const d = new Date(days[0].date)
+        d.setDate(days[0].date.getDate() - (firstDayOfWeek - i))
+        list.unshift({
+          date: d,
+          key: `pad-start-${d.getTime()}`,
+          minutes: 0,
+          sessions: 0,
+          isPlaceholder: true,
+        })
+      }
+    }
+    
+    // Pad end to Saturday (getDay() === 6)
+    const lastDayOfWeek = days[days.length - 1].date.getDay()
+    if (lastDayOfWeek < 6) {
+      for (let i = lastDayOfWeek + 1; i <= 6; i++) {
+        const d = new Date(days[days.length - 1].date)
+        d.setDate(days[days.length - 1].date.getDate() + (i - lastDayOfWeek))
+        list.push({
+          date: d,
+          key: `pad-end-${d.getTime()}`,
+          minutes: 0,
+          sessions: 0,
+          isPlaceholder: true,
+        })
+      }
+    }
+    
+    return list
+  }, [days])
+
   const weeks = useMemo(() => {
     const cols = []
-    for (let i = 0; i < days.length; i += 7) {
-      cols.push(days.slice(i, i + 7))
+    for (let i = 0; i < paddedDays.length; i += 7) {
+      cols.push(paddedDays.slice(i, i + 7))
     }
     return cols
-  }, [days])
+  }, [paddedDays])
 
   return (
     <div
-      className="shrink-0 border-t"
+      className="shrink-0 border-b"
       style={{ borderColor: 'var(--glass-border)', background: 'var(--bg-surface)' }}
     >
       <button
@@ -63,15 +103,18 @@ export default function FocusHeatmap({ sessions }) {
                           animate={{ opacity: 1, scale: 1 }}
                           transition={{ delay: idx * 0.008, duration: 0.2 }}
                           className="w-3 h-3 rounded-sm cursor-default"
-                          style={style}
+                          style={{
+                            ...style,
+                            opacity: day.isPlaceholder ? 0.15 : style.opacity || 1,
+                          }}
                           onMouseEnter={() =>
-                            setTooltip({
+                            !day.isPlaceholder && setTooltip({
                               x: 0,
                               text: formatHeatmapTooltip(day.date, day.minutes, day.sessions),
                             })
                           }
                           onMouseLeave={() => setTooltip(null)}
-                          title={formatHeatmapTooltip(day.date, day.minutes, day.sessions)}
+                          title={day.isPlaceholder ? '' : formatHeatmapTooltip(day.date, day.minutes, day.sessions)}
                         />
                       )
                     })}

@@ -41,7 +41,7 @@ export default function SessionArchive({ sessions }) {
 
   return (
     <div
-      className="shrink-0 border-t"
+      className="shrink-0 border-b"
       style={{ borderColor: 'var(--glass-border)', background: 'var(--bg-surface)' }}
     >
       <button
@@ -128,9 +128,21 @@ export default function SessionArchive({ sessions }) {
                       <motion.div
                         key={s.id}
                         whileHover={{ scale: 1.03, rotateY: 5 }}
-                        className="glass-card shrink-0 w-48 p-3"
+                        className="glass-card shrink-0 w-48 p-3 relative"
                         style={{ background: 'var(--bg-elevated)' }}
                       >
+                        {s.mood && (
+                          <span
+                            className="absolute top-2.5 right-2.5 text-xs select-none"
+                            title={`Felt ${s.mood.toUpperCase().replace('_', ' ')}`}
+                          >
+                            {s.mood === 'tired' && '😴'}
+                            {s.mood === 'neutral' && '😐'}
+                            {s.mood === 'good' && '🙂'}
+                            {s.mood === 'energized' && '⚡'}
+                            {s.mood === 'in_the_zone' && '🔥'}
+                          </span>
+                        )}
                         <span className="font-space text-[9px] text-[var(--neon-cyan)]">
                           {new Date(s.date).toLocaleDateString(undefined, {
                             month: 'short',

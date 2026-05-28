@@ -42,8 +42,8 @@ export default function TimerRing({ remaining, total, taskTitle, large, huge, sh
   }
 
   // Calculate size variables per ring
-  const ringSize = huge ? 520 : large ? 270 : 190
-  const strokeWidth = huge ? 44 : large ? 22 : 16
+  const ringSize = huge ? 500 : large ? 310 : 160
+  const strokeWidth = huge ? 40 : large ? 22 : 12
   const viewBoxSize = ringSize + 30
 
   return (

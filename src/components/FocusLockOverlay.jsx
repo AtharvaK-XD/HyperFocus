@@ -54,22 +54,29 @@ const FocusLockOverlay = forwardRef(function FocusLockOverlay(
       />
 
       <header className="relative z-10 flex items-center justify-between px-6 py-4 border-b border-[var(--glass-border)]">
-        <p className="font-dm text-xs text-[var(--neon-violet)]">
+        <p className="font-dm text-xs text-[var(--neon-violet)] mx-auto sm:mx-0">
           <span className="inline-block w-2 h-2 rounded-full bg-[var(--neon-rose)] mr-2 animate-pulse" />
           FOCUS LOCK ACTIVE — Session: {formatTime(focusLockElapsed)} elapsed
         </p>
-        <motion.button
-          type="button"
-          whileTap={{ scale: 0.9 }}
-          onClick={onExit}
-          className="flex items-center gap-1 font-dm text-[10px] px-3 py-1.5 rounded-lg border border-[var(--glass-border)] text-[var(--text-muted)] hover:border-[var(--neon-cyan)] hover:text-[var(--neon-cyan)]"
-          aria-label="Exit focus lock"
-        >
-          <X size={14} /> EXIT
-        </motion.button>
       </header>
 
-      <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-4">
+      <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-4 gap-8">
+        <motion.button
+          type="button"
+          whileTap={{ scale: 0.95 }}
+          onClick={onExit}
+          className="flex items-center gap-2 font-orbitron text-xs md:text-sm px-8 py-3.5 rounded-xl border transition-all duration-300 tracking-[0.2em] font-bold z-30"
+          style={{
+            borderColor: 'var(--neon-rose)',
+            color: 'var(--text-primary)',
+            background: 'linear-gradient(135deg, rgba(255,45,107,0.2) 0%, rgba(255,45,107,0.02) 100%)',
+            boxShadow: '0 0 24px rgba(255,45,107,0.25)',
+          }}
+          aria-label="Exit focus lock"
+        >
+          <X size={16} style={{ color: 'var(--neon-rose)' }} /> EXIT FOCUS LOCK
+        </motion.button>
+
         {active && (
           <TimerRing
             remaining={remaining}
