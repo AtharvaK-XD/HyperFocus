@@ -103,10 +103,10 @@ export default function TopBar({
               onClick={onConnectClick}
               className="px-3 py-1.5 rounded-lg border font-dm text-[9px] transition-all flex items-center gap-1.5 font-bold animate-pulse hover:animate-none uppercase cursor-pointer"
               style={{
-                borderColor: 'rgba(123, 47, 255, 0.4)',
-                background: 'rgba(123, 47, 255, 0.05)',
-                color: 'var(--neon-violet)',
-                boxShadow: '0 0 10px rgba(123, 47, 255, 0.1)',
+                borderColor: 'rgba(255, 184, 0, 0.4)',
+                background: 'rgba(255, 184, 0, 0.05)',
+                color: 'var(--neon-amber)',
+                boxShadow: '0 0 10px rgba(255, 184, 0, 0.15)',
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.borderColor = 'var(--neon-cyan)';
@@ -114,9 +114,9 @@ export default function TopBar({
                 e.currentTarget.style.boxShadow = '0 0 12px rgba(0, 245, 212, 0.3)';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = 'rgba(123, 47, 255, 0.4)';
-                e.currentTarget.style.color = 'var(--neon-violet)';
-                e.currentTarget.style.boxShadow = '0 0 10px rgba(123, 47, 255, 0.1)';
+                e.currentTarget.style.borderColor = 'rgba(255, 184, 0, 0.4)';
+                e.currentTarget.style.color = 'var(--neon-amber)';
+                e.currentTarget.style.boxShadow = '0 0 10px rgba(255, 184, 0, 0.15)';
               }}
             >
               👤 SYNC PROFILE

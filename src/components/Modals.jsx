@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { AlertTriangle, Mail, CheckCircle2, Cpu, LogOut, Check } from 'lucide-react'
 import confetti from 'canvas-confetti'
@@ -311,6 +311,15 @@ export function NeuralIdentityModal({
     'IDENTITY SYNC COMPLETE.'
   ]
 
+
+
+  const callbackRefs = useRef({ onConnect, onClose, emailHasData, hasLocalData, emailInput })
+  const hasFiredRef = useRef(false)
+
+  useEffect(() => {
+    callbackRefs.current = { onConnect, onClose, emailHasData, hasLocalData, emailInput }
+  })
+
   useEffect(() => {
     if (open) {
       if (currentEmail) {
@@ -320,40 +329,45 @@ export function NeuralIdentityModal({
         setEmailInput('')
         setErrorMsg('')
         setSyncStage(0)
+        hasFiredRef.current = false // Reset fail-safe on modal reopen
       }
     }
   }, [open, currentEmail])
 
   useEffect(() => {
     if (step === 'syncing') {
+      hasFiredRef.current = false // Reset when starting sync animation
+      let stage = 0
       const interval = setInterval(() => {
-        setSyncStage((prev) => {
-          if (prev < syncLogs.length - 1) {
-            return prev + 1
+        stage += 1
+        if (stage < syncLogs.length) {
+          setSyncStage(stage)
+        } else {
+          clearInterval(interval)
+          if (hasFiredRef.current) return // Double trigger fail-safe
+          hasFiredRef.current = true
+
+          const { onConnect, onClose, emailHasData, hasLocalData, emailInput } = callbackRefs.current
+          const emailClean = emailInput.toLowerCase().trim()
+          const exists = emailHasData(emailClean)
+          if (hasLocalData && !exists) {
+            setStep('mergePrompt')
+            hasFiredRef.current = false // Allow merge click
           } else {
-            clearInterval(interval)
-            // Sync complete logic
-            const emailClean = emailInput.toLowerCase().trim()
-            const exists = emailHasData(emailClean)
-            if (hasLocalData && !exists) {
-              setStep('mergePrompt')
-            } else {
-              onConnect(emailClean, false)
-              confetti({
-                particleCount: 80,
-                spread: 50,
-                origin: { y: 0.6 },
-                colors: ['#00f5d4', '#7b2fff'],
-              })
-              onClose()
-            }
-            return prev
+            onConnect(emailClean, false)
+            confetti({
+              particleCount: 80,
+              spread: 50,
+              origin: { y: 0.6 },
+              colors: ['#00f5d4', '#7b2fff'],
+            })
+            onClose()
           }
-        })
+        }
       }, 350)
       return () => clearInterval(interval)
     }
-  }, [step, emailInput, hasLocalData, emailHasData, onConnect, onClose])
+  }, [step])
 
   const handleConnectClick = (e) => {
     e.preventDefault()
@@ -373,6 +387,9 @@ export function NeuralIdentityModal({
   }
 
   const handleMergeAction = (shouldMerge) => {
+    if (hasFiredRef.current) return // Double click fail-safe
+    hasFiredRef.current = true
+
     onConnect(emailInput.toLowerCase().trim(), shouldMerge)
     confetti({
       particleCount: 100,

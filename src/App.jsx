@@ -18,6 +18,7 @@ import HydrationReminder from './components/Wellness/HydrationReminder'
 import EyeRestAlert from './components/Wellness/EyeRestAlert'
 import MoodCheckIn from './components/Wellness/MoodCheckIn'
 import OnboardingOverlay from './components/Wellness/OnboardingOverlay'
+import StartLoginOverlay from './components/Wellness/StartLoginOverlay'
 
 import {
   loadSessions,
@@ -49,6 +50,7 @@ const containerVariants = {
 export default function App() {
   const [email, setEmail] = useState(() => localStorage.getItem('fsb-active-email') || '')
   const [showIdentityModal, setShowIdentityModal] = useState(false)
+  const [showStartLogin, setShowStartLogin] = useState(() => !localStorage.getItem('fsb-active-email'))
 
   const [tasks, setTasks] = useState(() => loadTasks(localStorage.getItem('fsb-active-email') || ''))
   const [sessions, setSessions] = useState(() => loadSessions(localStorage.getItem('fsb-active-email') || ''))
@@ -131,7 +133,25 @@ export default function App() {
   const [welcomeToast, setWelcomeToast] = useState(false)
 
   const handleOnboardingComplete = (settings) => {
-    const onboardingKey = email ? `onboardingComplete_${email.toLowerCase().trim()}` : 'onboardingComplete'
+    let activeEmail = email
+    if (settings.email) {
+      activeEmail = settings.email.toLowerCase().trim()
+      setEmail(activeEmail)
+      localStorage.setItem('fsb-active-email', activeEmail)
+      
+      // Load/migrate data for that email node immediately so it applies!
+      const loadedTasks = loadTasks(activeEmail)
+      const loadedSessions = loadSessions(activeEmail)
+      const loadedGoal = loadDailyGoal(activeEmail)
+      const loadedPrefs = loadTimerPrefs(activeEmail)
+
+      setTasks(loadedTasks)
+      setSessions(loadedSessions)
+      setDailyGoal(loadedGoal)
+      setTimerPrefs(loadedPrefs)
+    }
+
+    const onboardingKey = activeEmail ? `onboardingComplete_${activeEmail}` : 'onboardingComplete'
     localStorage.setItem(onboardingKey, 'true')
     
     const nextSettings = {
@@ -141,7 +161,7 @@ export default function App() {
       soundscape: settings.soundscape,
     }
     setUserSettings(nextSettings)
-    const settingsKey = email ? `userSettings_${email.toLowerCase().trim()}` : 'userSettings'
+    const settingsKey = activeEmail ? `userSettings_${activeEmail}` : 'userSettings'
     localStorage.setItem(settingsKey, JSON.stringify(nextSettings))
 
     // Apply daily focus goal setting
@@ -151,7 +171,7 @@ export default function App() {
       goalSeconds: goalSecs,
     }
     setDailyGoal(nextGoal)
-    saveDailyGoal(nextGoal, email)
+    saveDailyGoal(nextGoal, activeEmail)
 
     // Apply default session duration
     const activeSecs = settings.defaultSessionMinutes * 60
@@ -255,6 +275,7 @@ export default function App() {
       setRemaining(activeSecs)
     }
 
+    setShowStartLogin(false)
     setToast(`Neural link sync complete: Profile ${cleanEmail} loaded`)
     setTimeout(() => setToast(''), 4000)
   }
@@ -300,6 +321,7 @@ export default function App() {
       setRemaining(activeSecs)
     }
 
+    setShowStartLogin(true)
     setToast('Neural profile disconnected. Fallback to Guest session.')
     setTimeout(() => setToast(''), 4000)
   }
@@ -958,6 +980,14 @@ export default function App() {
         onConnect={handleConnectEmail}
         onDisconnect={handleDisconnectEmail}
         onClose={() => setShowIdentityModal(false)}
+      />
+
+      <StartLoginOverlay
+        open={showStartLogin && !onboardingActive}
+        emailHasData={emailHasData}
+        hasLocalData={hasLocalData}
+        onConnect={handleConnectEmail}
+        onBypass={() => setShowStartLogin(false)}
       />
 
       {/* --- Wellness Components & Modals Mounts --- */}

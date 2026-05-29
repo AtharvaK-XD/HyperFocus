@@ -63,6 +63,10 @@ export default function OnboardingOverlay({ open, onComplete }) {
   const [sessionMinutes, setSessionMinutes] = useState(25) // Default: 25 MIN
   const [soundscape, setSoundscape] = useState('spotify') // Default: SPOTIFY
 
+  // Email Sync States
+  const [email, setEmail] = useState('')
+  const [errorMsg, setErrorMsg] = useState('')
+
   const synthRef = useRef(null)
 
   useEffect(() => {
@@ -77,9 +81,20 @@ export default function OnboardingOverlay({ open, onComplete }) {
   if (!open) return null
 
   const handleNext = () => {
-    if (step < 3) {
+    if (step < 4) {
       setStep(step + 1)
     } else {
+      // Step 4: Verify email if entered
+      const emailClean = email.trim()
+      if (emailClean) {
+        const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+        if (!regex.test(emailClean)) {
+          setErrorMsg('Invalid quantum address format')
+          return
+        }
+      }
+      setErrorMsg('')
+
       // Trigger Launch!
       setInitializing(true)
       if (synthRef.current) {
@@ -93,6 +108,7 @@ export default function OnboardingOverlay({ open, onComplete }) {
           dailyGoalHours: finalGoal,
           defaultSessionMinutes: sessionMinutes,
           soundscape,
+          email: emailClean || null,
         })
         setInitializing(false)
         setStep(1)
@@ -108,6 +124,7 @@ export default function OnboardingOverlay({ open, onComplete }) {
       dailyGoalHours: 2,
       defaultSessionMinutes: 25,
       soundscape: 'spotify',
+      email: null,
     })
   }
 
@@ -161,7 +178,7 @@ export default function OnboardingOverlay({ open, onComplete }) {
       >
         {/* Top Progress Dots */}
         <div className="flex justify-center gap-3.5 mb-6">
-          {[1, 2, 3].map((s) => (
+          {[1, 2, 3, 4].map((s) => (
             <div key={s} className="relative w-2 h-2 flex items-center justify-center">
               {step === s ? (
                 <motion.div
@@ -505,6 +522,55 @@ export default function OnboardingOverlay({ open, onComplete }) {
                   </div>
                 </div>
               )}
+
+              {/* STEP 4: NEURAL IDENTITY SYNC */}
+              {step === 4 && (
+                <div className="flex flex-col gap-6 w-full items-center text-center">
+                  <div className="text-center">
+                    <h2
+                      className="font-orbitron text-base md:text-lg tracking-widest text-[var(--neon-cyan)] font-bold uppercase"
+                      style={{ textShadow: '0 0 12px rgba(0, 245, 212, 0.35)' }}
+                    >
+                      NEURAL LOGIN
+                    </h2>
+                    <p className="font-dm text-[10px] text-[var(--text-muted)] uppercase tracking-wider mt-0.5">
+                      Sign in via your email signature
+                    </p>
+                  </div>
+
+                  <p className="font-dm text-[10px] text-[var(--text-muted)] max-w-sm leading-relaxed">
+                    Authenticate using your email address (no password required). Syncs and recovers all of your past tasks, daily goals, configurations, and daily streaks instantly.
+                  </p>
+
+                  <div className="w-full max-w-xs space-y-3 font-dm text-xs">
+                    <div className="relative">
+                      <div className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]">
+                        {/* Inline SVG Mail Icon */}
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                          <polyline points="22,6 12,13 2,6" />
+                        </svg>
+                      </div>
+                      <input
+                        type="email"
+                        placeholder="agent@nebula.io"
+                        value={email}
+                        onChange={(e) => {
+                          setEmail(e.target.value)
+                          if (errorMsg) setErrorMsg('')
+                        }}
+                        className="w-full pl-9 pr-3 py-2 rounded-lg text-xs font-dm bg-[var(--bg-void)] border text-[var(--text-primary)] transition-colors focus:border-[var(--neon-cyan)]"
+                        style={{ borderColor: errorMsg ? 'var(--neon-rose)' : 'var(--glass-border)' }}
+                      />
+                    </div>
+                    {errorMsg && (
+                      <p className="text-[var(--neon-rose)] text-[9px] font-dm uppercase tracking-wide">
+                        ⚡ {errorMsg}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
             </motion.div>
           </AnimatePresence>
 
@@ -525,21 +591,25 @@ export default function OnboardingOverlay({ open, onComplete }) {
               whileTap={{ scale: 0.98 }}
               disabled={initializing}
               onClick={handleNext}
-              className="py-3 px-6 rounded-lg font-orbitron text-xs tracking-wider flex items-center justify-center gap-2 select-none"
+              className="py-3 px-6 rounded-lg font-orbitron text-xs tracking-wider flex items-center justify-center gap-2 select-none cursor-pointer"
               style={{
                 background:
                   step === 1
                     ? 'linear-gradient(135deg, var(--neon-cyan), #00c4a7)'
                     : step === 2
                     ? 'linear-gradient(135deg, var(--neon-violet), #5a1fcc)'
+                    : step === 3
+                    ? 'linear-gradient(135deg, var(--neon-amber), #cc9300)'
                     : 'linear-gradient(135deg, var(--neon-cyan), var(--neon-violet))',
                 color: step === 1 ? 'var(--bg-void)' : 'var(--text-primary)',
                 boxShadow:
-                  step === 3
+                  step === 4
                     ? '0 0 15px rgba(0, 245, 212, 0.3)'
                     : step === 1
                     ? '0 0 12px rgba(0, 245, 212, 0.25)'
-                    : '0 0 12px rgba(123, 47, 255, 0.25)',
+                    : step === 2
+                    ? '0 0 12px rgba(123, 47, 255, 0.25)'
+                    : '0 0 12px rgba(255, 184, 0, 0.25)',
                 fontWeight: 'bold',
               }}
             >
@@ -553,10 +623,12 @@ export default function OnboardingOverlay({ open, onComplete }) {
                 </>
               ) : step === 1 ? (
                 'INITIALIZE SYSTEM →'
-              ) : step === 2 ? (
+              ) : step === 2 || step === 3 ? (
                 'GOT IT →'
+              ) : email.trim() ? (
+                'AUTHENTICATE & LOGIN ⚡'
               ) : (
-                'LAUNCH HYPER FOCUS ⚡'
+                'LAUNCH GUEST SESSION ⚡'
               )}
             </motion.button>
           </div>
