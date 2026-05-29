@@ -20,8 +20,10 @@
 
 <br/>
 
-<a href="https://www.youtube.com/watch?v=VdeI1eRkAa0&feature=youtu.be" target="_blank">
-  <img src="./thumbnail.png" alt="Hyper Focus — Click to Watch Demo" width="100%" />
+## 📺 Demo
+
+<a href="https://www.youtube.com/watch?v=VdeI1eRkAa0" target="_blank">
+  <img src="https://img.youtube.com/vi/VdeI1eRkAa0/maxresdefault.jpg" alt="Hyper Focus — Click to Watch Demo on YouTube" width="100%" style="border-radius: 12px;" />
 </a>
 
 > 👆 *Click the thumbnail to watch the full demo on YouTube*
@@ -29,6 +31,7 @@
 <br/>
 
 [![LIVE DEMO](https://img.shields.io/badge/🌐_LIVE_DEMO-hyper--focus--y27c.vercel.app-00ffcc?style=for-the-badge&labelColor=0d0d0d)](https://hyper-focus-y27c.vercel.app)
+[![Watch on YouTube](https://img.shields.io/badge/YouTube-Watch_Demo-FF0000?style=for-the-badge&logo=youtube&logoColor=white)](https://www.youtube.com/watch?v=VdeI1eRkAa0)
 
 </div>
 
@@ -144,18 +147,6 @@ hyper-focus/
 ## 🌐 Live Demo
 
 👉 **[https://hyper-focus-y27c.vercel.app](https://hyper-focus-y27c.vercel.app)**
-
----
-
-## 📺 Demo Video
-
-<a href="https://www.youtube.com/watch?v=VdeI1eRkAa0&feature=youtu.be" target="_blank">
-  <img src="./thumbnail.png" alt="Hyper Focus Demo — Watch on YouTube" width="100%" />
-</a>
-
-<br/>
-
-[![Watch on YouTube](https://img.shields.io/badge/YouTube-Watch_Demo-FF0000?style=for-the-badge&logo=youtube&logoColor=white)](https://www.youtube.com/watch?v=VdeI1eRkAa0&feature=youtu.be)
 
 ---
 
