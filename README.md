@@ -174,6 +174,4 @@ This project is licensed under the **MIT License** — see the [LICENSE](LICENSE
 
 Built with 🖤 by **[AtharvaK-XD](https://github.com/AtharvaK-XD)**
 
-*Stop tracking time. Start owning it.*
-
 </div>
