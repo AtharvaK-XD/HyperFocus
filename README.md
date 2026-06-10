@@ -164,14 +164,8 @@ git push origin feature/your-feature-name
 
 ---
 
-## 📄 License
-
-This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
-
----
-
 <div align="center">
 
-Built with 🖤 by **[AtharvaK-XD](https://github.com/AtharvaK-XD)**
+Built with by **[AtharvaK-XD](https://github.com/AtharvaK-XD)**
 
 </div>
